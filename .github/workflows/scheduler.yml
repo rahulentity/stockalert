@@ -1,20 +1,21 @@
 name: Run Joby News Alert
 
+# Trigger workflow manually or on schedule
 on:
-  workflow_dispatch:      # allows manual run
+  workflow_dispatch:  # manual trigger
   schedule:
-    - cron: "*/5 * * * *"   # runs every 5 minutes
+    - cron: "*/5 * * * *"  # every 5 minutes
 
 jobs:
   run-script:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout your repo
+      # Step 1: Checkout repo
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Step 2: Setup Python
+      # Step 2: Set up Python
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -22,9 +23,12 @@ jobs:
 
       # Step 3: Install dependencies
       - name: Install dependencies
-        run: |
-          pip install gspread oauth2client rapidfuzz feedparser requests
+        run: pip install gspread oauth2client rapidfuzz feedparser requests
 
-      # Step 4: Run your script
+      # Step 4: Create credentials.json from secret
+      - name: Create credentials file
+        run: echo "${{ secrets.GOOGLE_CREDENTIALS_JSON }}" > credentials.json
+
+      # Step 5: Run Python script
       - name: Run Joby News Alert
         run: python joby_news_alert.py
