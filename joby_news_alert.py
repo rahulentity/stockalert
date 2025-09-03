@@ -11,7 +11,7 @@ import smtplib, ssl
 # ==== SETTINGS ====
 NEWS_FEED_URL = "https://news.google.com/rss/search?q=Joby+Aviation&hl=en-US&gl=US&ceid=US:en"
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1ENEUAFY4Que87U4ZTiLoguc4VhAVVc4l4cGyDU5k34Y/edit#gid=0"
-SERVICE_ACCOUNT_FILE = "credentials.json"  # JSON key for stocksheet@stockalert-471023.iam.gserviceaccount.com
+SERVICE_ACCOUNT_FILE = "credentials.json"  # Created from GitHub Secret in workflow
 
 # Email (optional)
 SENDER_EMAIL = "rahulentity5@gmail.com"
@@ -28,6 +28,10 @@ CHAT_ID = "your_chat_id"
 
 # ==== FUNCTIONS ====
 
+def log(message):
+    """Print timestamped logs."""
+    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {message}")
+
 def get_all_joby_news():
     feed = feedparser.parse(NEWS_FEED_URL)
     articles = []
@@ -39,12 +43,11 @@ def get_all_joby_news():
         })
     return articles
 
-
 def init_google_sheet():
     creds = gspread.service_account(filename=SERVICE_ACCOUNT_FILE)
     sheet = creds.open_by_url(SHEET_URL).sheet1
+    log("Connected to Google Sheet successfully.")
     return sheet
-
 
 def is_article_new(sheet, article_title, article_link, threshold=85):
     """
@@ -65,11 +68,9 @@ def is_article_new(sheet, article_title, article_link, threshold=85):
 
     return True
 
-
 def append_to_google_sheet(sheet, article):
     sheet.append_row([article["published"], article["title"], article["link"]])
-    print("Added to Google Sheet:", article["title"])
-
+    log(f"Added to Google Sheet: {article['title']}")
 
 def send_pushover_alert(news_content):
     response = requests.post("https://api.pushover.net/1/messages.json", data={
@@ -82,8 +83,7 @@ def send_pushover_alert(news_content):
         "title": "🚨 Joby Aviation Breaking News",
         "message": news_content[:1000]
     })
-    print("📱 Pushover alert sent:", response.status_code)
-
+    log(f"Pushover alert sent (status code {response.status_code})")
 
 def send_email(news_content):
     msg = MIMEMultipart("alternative")
@@ -98,18 +98,19 @@ def send_email(news_content):
     with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
         server.login(SENDER_EMAIL, SENDER_PASSWORD)
         server.sendmail(SENDER_EMAIL, RECEIVER_EMAIL, msg.as_string())
-
+    log("Email sent successfully.")
 
 def send_telegram_alert(news_content):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     response = requests.post(url, data={"chat_id": CHAT_ID, "text": news_content})
-    print("📲 Telegram alert sent:", response.status_code)
-
+    log(f"Telegram alert sent (status code {response.status_code})")
 
 # ==== MAIN ====
 if __name__ == "__main__":
+    log("Joby News Alert Script Started.")
     sheet = init_google_sheet()
     news_list = get_all_joby_news()
+    new_articles_count = 0
 
     for article in news_list:
         if is_article_new(sheet, article["title"], article["link"]):
@@ -118,7 +119,10 @@ if __name__ == "__main__":
 
             # Send alerts
             send_pushover_alert(alert_text)
-            # send_email(alert_text)       # optional
-            # send_telegram_alert(alert_text)  # optional
+            # send_email(alert_text)          # optional
+            # send_telegram_alert(alert_text) # optional
+            new_articles_count += 1
         else:
-            print("Already recorded:", article["title"])
+            log(f"Already recorded: {article['title']}")
+
+    log(f"Script finished. {new_articles_count} new articles processed.")
