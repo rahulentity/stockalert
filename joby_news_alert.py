@@ -4,6 +4,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import requests
 import time
+from datetime import datetime, timedelta
 
 # ==== SETTINGS ====
 NEWS_FEED_URL = "https://news.google.com/rss/search?q=Joby+Aviation&hl=en-US&gl=US&ceid=US:en"
@@ -24,21 +25,22 @@ CHAT_ID = "your_chat_id"  # e.g. from @userinfobot
 
 # ==== FUNCTIONS ====
 
-def get_latest_joby_news():
+def get_recent_joby_news(minutes=30):
     feed = feedparser.parse(NEWS_FEED_URL)
     if not feed.entries:
-        return None
+        return []
 
-    # Sort by published date (most recent first)
-    latest_entry = sorted(
-        feed.entries,
-        key=lambda x: x.get("published_parsed", time.gmtime(0)),
-        reverse=True
-    )[0]
+    cutoff = datetime.utcnow() - timedelta(minutes=minutes)
+    fresh_articles = []
 
-    # Format single latest article
-    article = f"{latest_entry.title}\n{latest_entry.link}\nPublished: {latest_entry.published}\n"
-    return article
+    for entry in feed.entries:
+        if hasattr(entry, "published_parsed"):
+            published_time = datetime.fromtimestamp(time.mktime(entry.published_parsed))
+            if published_time > cutoff:
+                article = f"{entry.title}\n{entry.link}\nPublished: {entry.published}\n"
+                fresh_articles.append(article)
+
+    return fresh_articles
 
 
 def send_email(news_content):
@@ -60,12 +62,12 @@ def send_pushover_alert(news_content):
     response = requests.post("https://api.pushover.net/1/messages.json", data={
         "token": PUSHOVER_TOKEN,
         "user": PUSHOVER_USER,
-        "priority": 2,              # 🚨 Emergency
-        "retry": 60,                # retry every 60 seconds
-        "expire": 3600,             # keep retrying for 1 hour
-        "sound": "Alarm",      # 🔊 louder & repeating sound
+        "priority": 2,
+        "retry": 60,
+        "expire": 3600,
+        "sound": "Alarm",
         "title": "🚨 Joby Aviation Breaking News",
-        "message": news_content[:1000]  # limit length
+        "message": news_content[:1000]
     })
     print("📱 Pushover alert sent:", response.status_code)
 
@@ -78,18 +80,19 @@ def send_telegram_alert(news_content):
 
 # ==== MAIN ====
 if __name__ == "__main__":
-    news = get_latest_joby_news()
-    if news:
-        print(news)
+    news_list = get_recent_joby_news(30)
+    if news_list:
+        for news in news_list:
+            print(news)
 
-        # Send Email (optional)
-        # send_email(news)
+            # Send Email (optional)
+            # send_email(news)
 
-        # Send Pushover
-        send_pushover_alert(news)
+            # Send Pushover
+            send_pushover_alert(news)
 
-        # Send Telegram (optional)
-        # send_telegram_alert(news)
+            # Send Telegram (optional)
+            # send_telegram_alert(news)
 
     else:
-        print("No news found.")
+        print("No new news in the last 30 minutes.")
