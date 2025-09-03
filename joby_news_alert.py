@@ -3,15 +3,13 @@ import requests
 from datetime import datetime
 import gspread
 from rapidfuzz import fuzz
-from oauth2client.service_account import ServiceAccountCredentials
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import smtplib, ssl
 
 # ==== SETTINGS ====
 NEWS_FEED_URL = "https://news.google.com/rss/search?q=Joby+Aviation&hl=en-US&gl=US&ceid=US:en"
-SHEET_ID = "1ENEUAFY4Que87U4ZTiLoguc4VhAVVc4l4cGyDU5k34Y"
-SHEET_TAB = "Sheet1"
+SHEET_URL = "https://docs.google.com/spreadsheets/d/1ENEUAFY4Que87U4ZTiLoguc4VhAVVc4l4cGyDU5k34Y/edit#gid=0"
 
 # Email (optional)
 SENDER_EMAIL = "rahulentity5@gmail.com"
@@ -41,9 +39,8 @@ def get_all_joby_news():
 
 
 def init_google_sheet():
-    creds = gspread.service_account(filename="credentials.json")
-    client = gspread.authorize(creds)
-    sheet = client.open_by_key(SHEET_ID).worksheet(SHEET_TAB)
+    gc = gspread.public()  # Works with public sheet
+    sheet = gc.open_by_url(SHEET_URL).sheet1  # First tab
     return sheet
 
 
