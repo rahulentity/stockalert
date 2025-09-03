@@ -23,7 +23,7 @@ jobs:
       # Step 3: Install dependencies
       - name: Install dependencies
         run: |
-          pip install feedparser requests
+          pip install gspread oauth2client rapidfuzz feedparser requests
 
       # Step 4: Run your script
       - name: Run Joby News Alert
