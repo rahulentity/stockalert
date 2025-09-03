@@ -1,23 +1,30 @@
-name: Run Python Script on Schedule
+name: Run Joby News Alert
 
 on:
-  workflow_dispatch:      # run manually
+  workflow_dispatch:      # allows manual run
   schedule:
-    - cron: "0 9 * * *"   # optional: run daily at 09:00 UTC
+    - cron: "*/5 * * * *"   # runs every 5 minutes
 
 jobs:
   run-script:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
 
-      - uses: actions/setup-python@v4
+    steps:
+      # Step 1: Checkout your repo
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Step 2: Setup Python
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
           python-version: "3.10"
 
+      # Step 3: Install dependencies
       - name: Install dependencies
         run: |
           pip install feedparser requests
 
-      - name: Run script
+      # Step 4: Run your script
+      - name: Run Joby News Alert
         run: python joby_news_alert.py
