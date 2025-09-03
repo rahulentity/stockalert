@@ -17,7 +17,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install feedparser
+          pip install feedparser requests
 
       - name: Run script
         run: python joby_news_alert.py
