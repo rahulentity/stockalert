@@ -3,6 +3,7 @@ import requests
 from datetime import datetime
 import gspread
 from rapidfuzz import fuzz
+from oauth2client.service_account import ServiceAccountCredentials
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import smtplib, ssl
@@ -10,10 +11,11 @@ import smtplib, ssl
 # ==== SETTINGS ====
 NEWS_FEED_URL = "https://news.google.com/rss/search?q=Joby+Aviation&hl=en-US&gl=US&ceid=US:en"
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1ENEUAFY4Que87U4ZTiLoguc4VhAVVc4l4cGyDU5k34Y/edit#gid=0"
+SERVICE_ACCOUNT_FILE = "credentials.json"  # JSON key for stocksheet@stockalert-471023.iam.gserviceaccount.com
 
 # Email (optional)
 SENDER_EMAIL = "rahulentity5@gmail.com"
-SENDER_PASSWORD = "vcxg mhpi qefr jntr"   # Gmail App Password
+SENDER_PASSWORD = "vcxg mhpi qefr jntr"
 RECEIVER_EMAIL = "a34k92k346@pomail.net"
 
 # Pushover
@@ -39,8 +41,8 @@ def get_all_joby_news():
 
 
 def init_google_sheet():
-    gc = gspread.public()  # Works with public sheet
-    sheet = gc.open_by_url(SHEET_URL).sheet1  # First tab
+    creds = gspread.service_account(filename=SERVICE_ACCOUNT_FILE)
+    sheet = creds.open_by_url(SHEET_URL).sheet1
     return sheet
 
 
@@ -53,11 +55,9 @@ def is_article_new(sheet, article_title, article_link, threshold=85):
     existing_titles = sheet.col_values(2)  # Title column
     existing_links = sheet.col_values(3)   # Source column
 
-    # Check link first (exact match)
     if article_link in existing_links:
         return False
 
-    # Check title similarity
     for existing in existing_titles:
         similarity = fuzz.token_set_ratio(article_title, existing)
         if similarity >= threshold:
@@ -67,7 +67,6 @@ def is_article_new(sheet, article_title, article_link, threshold=85):
 
 
 def append_to_google_sheet(sheet, article):
-    # Append row in order: Date | Title | Source
     sheet.append_row([article["published"], article["title"], article["link"]])
     print("Added to Google Sheet:", article["title"])
 
